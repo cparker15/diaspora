@@ -40,10 +40,6 @@ namespace :migrations do
     puts "Done!"
   end
 
-  desc 'allow to upgrade old image urls to use rel path'
-  task :switch_image_urls do
-  end
-
   desc 'fix usernames with periods in them'
   task :fix_periods_in_username do
     RakeHelpers::fix_periods_in_usernames(false)
@@ -51,5 +47,29 @@ namespace :migrations do
 
   desc 'purge broken contacts'
   task :purge_broken_contacts do
+  end
+
+  desc 'absolutify all existing image references'
+  task :absolutify_image_references do
+    require File.join(Rails.root,"config/environment")
+
+    Photo.all.each do |photo|
+      # extract root
+      unless photo.image.url.match(/^https?:\/\//)
+
+        pod_url = photo.person.url
+        pod_url.chop! if pod_url[-1,1] == '/'
+        remote_path = "#{pod_url}#{photo.image.url}"
+      else
+        remote_path = photo.image.url
+      end
+
+      # get path/filename
+      name_start = remote_path.rindex '/'
+      photo.remote_photo_path = "#{remote_path.slice(0, name_start)}/"
+      photo.remote_photo_name = remote_path.slice(name_start + 1, remote_path.length)
+
+      photo.save!
+    end
   end
 end
