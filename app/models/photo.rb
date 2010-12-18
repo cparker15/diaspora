@@ -7,8 +7,10 @@ class Photo < Post
   include MongoMapper::Document
   mount_uploader :image, ImageUploader
 
-  xml_accessor :remote_photo
-  xml_accessor :caption
+  xml_reader :remote_photo_path
+  xml_reader :remote_photo_name
+
+  xml_reader :caption
   xml_reader :status_message_id
 
   key :caption,  String
@@ -27,7 +29,6 @@ class Photo < Post
 
   before_destroy :ensure_user_picture
 
-  #before_destroy :delete_parent_if_no_photos_or_message
   def ownership_of_status_message
     message = StatusMessage.find_by_id(self.status_message_id)
     if status_message_id && message
@@ -43,30 +44,33 @@ class Photo < Post
     photo.random_string = gen_random_string(10)
 
     photo.image.store! image_file
-    photo
-  end
 
-  def remote_photo
-    image.url.nil? ? (remote_photo_path + '/' + remote_photo_name) : image.url
-  end
+    unless photo.image.url.match(/^https?:\/\//)
+      pod_url = APP_CONFIG[:pod_url].dup
+      pod_url.chop! if APP_CONFIG[:pod_url][-1,1] == '/'
+      remote_path = "#{pod_url}#{photo.image.url}"
+    else
+      remote_path = photo.image.url
+    end
 
-  def remote_photo= remote_path
     name_start = remote_path.rindex '/'
-    self.remote_photo_path = remote_path.slice(0, name_start )
-    self.remote_photo_name = remote_path.slice(name_start + 1, remote_path.length)
+    photo.remote_photo_path = "#{remote_path.slice(0, name_start)}/"
+    photo.remote_photo_name = remote_path.slice(name_start + 1, remote_path.length)
+
+    photo
   end
 
   def url(name = nil)
     if remote_photo_path
-      name = name.to_s + "_" if name
-      person.url.chop + remote_photo_path + "/" + name.to_s + remote_photo_name
+      name = name.to_s + '_' if name
+      remote_photo_path + name.to_s + remote_photo_name
     else
-      image.url name
+      image.url(name)
     end
   end
 
   def ensure_user_picture
-    people = Person.all('profile.image_url' => absolute_url(:thumb_large) )
+    people = Person.all('profile.image_url' => url(:thumb_large) )
     people.each{ |person|
       person.profile.update_attributes(:image_url => nil)
     }
@@ -80,12 +84,6 @@ class Photo < Post
     true
   end
 
-  def absolute_url *args
-    pod_url = AppConfig[:pod_url].dup
-    pod_url.chop! if AppConfig[:pod_url][-1,1] == '/'
-    "#{pod_url}#{url(*args)}"
-  end
-
   def self.gen_random_string(len)
     chars = ("a".."z").to_a + ("A".."Z").to_a + ("0".."9").to_a
     string = ""
@@ -93,10 +91,11 @@ class Photo < Post
     return string
   end
 
+
   def as_json(opts={})
     {
-      :photo => {
-        :id => self.id,
+    :photo => {
+      :id => self.id,
         :url => self.url(:thumb_medium),
         :thumb_small => self.url(:thumb_small),
         :caption => self.caption

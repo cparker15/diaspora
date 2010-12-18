@@ -12,12 +12,12 @@ describe Profile do
         profile.should be_valid
         profile.first_name.should == "Shelly"
       end
-      
+
       it "can be 32 characters long" do
         profile = Factory.build(:profile, :first_name => "Hexagoooooooooooooooooooooooooon")
         profile.should be_valid
       end
-      
+
       it "cannot be 33 characters" do
         profile = Factory.build(:profile, :first_name => "Hexagooooooooooooooooooooooooooon")
         profile.should_not be_valid
@@ -29,12 +29,12 @@ describe Profile do
         profile.should be_valid
         profile.last_name.should == "Ohba"
       end
-      
+
       it "can be 32 characters long" do
         profile = Factory.build(:profile, :last_name => "Hexagoooooooooooooooooooooooooon")
         profile.should be_valid
       end
-      
+
       it "cannot be 33 characters" do
         profile = Factory.build(:profile, :last_name => "Hexagooooooooooooooooooooooooooon")
         profile.should_not be_valid
@@ -56,18 +56,17 @@ describe Profile do
     end
     it 'makes relative urls absolute' do
       @profile.image_url = @photo.url(:thumb_large)
-      @profile.image_url.should == "#{@pod_url}#{@photo.url(:thumb_large)}"
-    end
-    it 'accepts absolute urls' do
-      @profile.image_url = "#{@pod_url}#{@photo.url(:thumb_large)}"
-      @profile.image_url.should == "#{@pod_url}#{@photo.url(:thumb_large)}"
+
+      puts @profile.image_url
+
+      @profile.image_url.should == @photo.url(:thumb_large)
     end
   end
   describe 'serialization' do
-    let(:person) {Factory.create(:person)} 
-   
+    let(:person) {Factory.create(:person)}
+
     it 'should include persons diaspora handle' do
-      xml = person.profile.to_diaspora_xml 
+      xml = person.profile.to_diaspora_xml
 
       xml.should include person.diaspora_handle
       xml.should_not include person.id.to_s

@@ -7,6 +7,8 @@ gem 'chef', :require => false
 
 gem 'nokogiri', '1.4.3.1'
 
+gem "fog"
+
 #Security
 gem 'devise', '1.1.3'
 gem 'devise-mongo_mapper', :git => 'git://github.com/collectiveidea/devise-mongo_mapper'
